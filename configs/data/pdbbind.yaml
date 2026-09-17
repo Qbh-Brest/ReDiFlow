@@ -1,0 +1,48 @@
+_target_: src.datasets.pdbbind.PDBBindDataModule
+args:
+  # === 1. 修改数据路径 (注意用双反斜杠 \$ ===
+  # 指向你的 SDF 文件夹
+  data_dir: "D:\\PythonProject medicine\\project_mine\\data\\posebusters_benchmark_set_processed"
+  origin_data_dir: "D:\\PythonProject medicine\\project_mine\\data\\posebusters_benchmark_set"
+  # === 2. 新增 Teacher 路径 (你的新 Dataset 需要这个) ===
+  teacher_dir: "D:\\PythonProject medicine\\project_mine\\data\\teacher_interp_sum"
+
+  # === 3. 必须修改的运行参数 ===
+  batch_size_per_device: 1   # 先用 1 跑通
+  num_workers: 0             # Windows 必须是 0！否则死锁/报错
+
+  # === 下面这些保留默认即可，或者根据需要修改 ===
+  all_atoms: ${common.all_atoms}
+  atom_max_neighbors: ${common.atom_max_neighbors}
+  atom_radius: ${common.atom_radius}
+  c_alpha_max_neighbors: ${common.c_alpha_max_neighbors}
+  cache_path: ${paths.data_dir}/cache
+
+  # 如果你的新 Dataset 代码里没有用到 embedding，这行留着也没事，或者指向一个空文件夹
+  # 注意：用双反斜杠 \\
+  esm_embeddings_path: "D:\\PythonProject medicine\\project_mine\\data\\esm2_embeddings.pt"
+
+  limit_complexes: 0
+  matching_maxiter: 20
+  matching_popsize: 20
+  max_lig_size: null
+  max_radius: 5.0
+  no_torsion: ${common.no_torsion}
+  num_conformers: 1
+  num_inference_complexes: 500
+  num_workers_for_preprocess: 0 # 这里也改成 0 安全点
+
+  receptor_radius: ${common.receptor_radius}
+  remove_hs: ${common.remove_hs}
+
+  # 这些 Split 路径如果你的新代码不读 txt 文件，留着不管就行
+  split_test: ${paths.data_dir}/splits/timesplit_test
+  split_train: ${paths.data_dir}/splits/timesplit_no_lig_overlap_train
+  split_val: ${paths.data_dir}/splits/timesplit_no_lig_overlap_val
+
+  tor_sigma_max: 3.14
+  tor_sigma_min: 0.03
+  tr_sigma_max: 8.0
+  tr_sigma_min: 0.1
+  rot_sigma_max: 1.55
+  rot_sigma_min: 0.03

@@ -1,0 +1,15 @@
+defaults:
+  - default
+
+# 单卡训练不要用 ddp，改成 auto 让它自己决定
+strategy: auto
+
+accelerator: gpu
+
+# 重点在这里：改成 1
+devices: [0]
+
+num_nodes: 1
+
+# 单卡不需要同步 BatchNorm，改成 False
+sync_batchnorm: False

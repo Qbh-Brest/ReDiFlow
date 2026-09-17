@@ -1,0 +1,32 @@
+_target_: src.module.FlowMatch.Base_FM_Model
+args:
+  all_atoms: ${common.all_atoms}
+  atom_max_neighbors: ${common.atom_max_neighbors}
+  atom_radius: ${common.atom_radius}
+  c_alpha_max_neighbors: ${common.c_alpha_max_neighbors}
+  cross_distance_embed_dim: 64
+  cross_max_distance: 80
+  distance_embed_dim: 64
+  sigma_embed_dim: 64
+  dropout: 0.1
+  dynamic_max_cross: true
+  ema_rate: 0.999
+  embedding_scale: 1000
+  embedding_type: sinusoidal
+  max_radius: 5.0
+  no_torsion: ${common.no_torsion}
+  ns: 48
+  num_conv_layers: 5
+  nv: 12
+  receptor_radius: ${common.receptor_radius}
+  remove_hs: ${common.remove_hs}
+  scale_by_sigma: false
+  tanh_out: false
+  tor_weight: 1.0
+  rot_weight: 1.0
+  tr_weight: 1.0
+
+  use_ema: false
+  lr: 1e-4
+  w_decay: 1e-4
+
