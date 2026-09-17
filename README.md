@@ -25,7 +25,7 @@ The overall workflow consists of:
 
 The code was tested with:
 
-- Python [version]
+- Python [version3.10]
 - PyTorch [version]
 - PyTorch Geometric [version]
 - CUDA [version]
