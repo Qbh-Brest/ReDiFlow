@@ -22,14 +22,12 @@ The overall workflow consists of:
 [Optional: insert one framework figure here]
 
 ## Environment
-
 The code was tested with:
-
-- Python [version3.10]
-- PyTorch [version]
-- PyTorch Geometric [version]
-- CUDA [version]
-- RDKit [version]
+- Python 3.10.15
+- PyTorch 2.5.1+cu124
+- PyTorch Geometric 2.6.1
+- CUDA 12.4
+- RDKit 2026.03.1
 
 Create the environment using:
 
