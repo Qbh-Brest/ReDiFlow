@@ -1,6 +1,6 @@
 # ReDiFlow
 
-Official research implementation of **ReDiFlow: [Full Paper Title]**.
+Official research implementation of **……: [Full Paper Title]**.
 
 ReDiFlow is a [brief description, e.g., flow-based protein–ligand docking framework]
 designed for [main task]. It models [translation, rotation, and torsional updates]
@@ -19,7 +19,6 @@ The overall workflow consists of:
 4. Pose generation and ranking
 5. Evaluation using docking metrics
 
-[Optional: insert one framework figure here]
 
 ## Environment
 The code was tested with:
