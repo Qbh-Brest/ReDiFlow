@@ -1,6 +1,4 @@
-# ReDiFlow
-
-**Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking**
+# ReDiFlow:Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking
 
 ReDiFlow is an inference-time temporal redistribution and decoupling framework for Riemannian flow-based molecular docking. It allows ligand translation, global rotation, and internal torsion to follow different effective generative times while remaining coupled through the same molecular state.
 
