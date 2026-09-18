@@ -28,13 +28,12 @@ At every sampling step, the pre-trained backbone is queried using the same curre
 ## Installation
 
 The exact environment file and tested package versions will be added with the finalized release. The main dependencies used by the current implementation include:
-
-- Python
-- PyTorch
-- PyTorch Lightning
-- e3nn
-- RDKit
-- PoseBusters
+The code was tested with:
+- Python 3.10.15
+- PyTorch 2.5.1+cu124
+- PyTorch Geometric 2.6.1
+- CUDA 12.4
+- RDKit 2026.03.1
 
 Create the environment using the file provided with the repository:
 
