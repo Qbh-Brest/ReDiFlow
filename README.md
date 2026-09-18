@@ -191,7 +191,7 @@ Translation and rotation receive larger steps early in sampling for global place
 
 ## License
 
-`<ADD PROJECT LICENSE AFTER CHECKING COMPATIBILITY WITH ALL REUSED COMPONENTS>`
+License will be added in a subsequent release.
 
 ## Citation
 
