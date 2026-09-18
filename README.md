@@ -32,6 +32,7 @@ At every sampling step, the pre-trained backbone is queried using the same curre
   - [Build processed molecular data](#build-processed-molecular-data)
 - [Inference](#inference)
   - [Default ReDiFlow schedules](#default-ReDiFlow-schedules)
+- [License](#license)
 - [Citation](#citation)
 
 ## Installation
@@ -188,6 +189,10 @@ Each per-DOF schedule is independently normalized to sum to 1.
 
 Translation and rotation receive larger steps early in sampling for global placement, whereas torsion receives larger steps in the middle of the trajectory for conformational refinement.
 
+## License
+
+`<ADD PROJECT LICENSE AFTER CHECKING COMPATIBILITY WITH ALL REUSED COMPONENTS>`
+
 ## Citation
 
 Citation information will be added when the manuscript is publicly available.
@@ -201,6 +206,4 @@ Citation information will be added when the manuscript is publicly available.
 }
 ```
 
-## License
 
-`<ADD PROJECT LICENSE AFTER CHECKING COMPATIBILITY WITH ALL REUSED COMPONENTS>`
