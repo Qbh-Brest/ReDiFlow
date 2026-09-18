@@ -146,18 +146,6 @@ python <INFERENCE_ENTRYPOINT> \
   --output-dir <PREDICTION_DIR>
 ```
 
-### Default ReDiFlow schedules
-
-Each per-DOF schedule is independently normalized to sum to 1.
-
-| Step $t$ | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| $\Delta t_{\mathrm{tr}}$ | 0.1400 | 0.1300 | 0.1200 | 0.1100 | 0.1000 | 0.1000 | 0.0900 | 0.0800 | 0.0700 | 0.0600 |
-| $\Delta t_{\mathrm{rot}}$ | 0.1300 | 0.1300 | 0.1200 | 0.1200 | 0.1100 | 0.1000 | 0.0900 | 0.0800 | 0.0700 | 0.0500 |
-| $\Delta t_{\mathrm{tor}}$ | 0.0539 | 0.0630 | 0.0878 | 0.1295 | 0.1657 | 0.1657 | 0.1295 | 0.0878 | 0.0630 | 0.0539 |
-
-Translation and rotation receive larger steps early in sampling for global placement, whereas torsion receives larger steps in the middle of the trajectory for conformational refinement.
-
 ## Evaluation
 
 The manuscript reports:
