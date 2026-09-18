@@ -12,7 +12,6 @@ ReDiFlow operates on a pre-trained docking backbone and does not modify the trai
 - Separate effective clocks for translation, rotation, and torsion.
 - State-coupled updates on the product space $\mathbb{R}^3 \times \mathrm{SO}(3) \times \mathbb{T}^m$.
 - Evaluation on PoseBusters, ASTEX Diverse, DockGen, and the PDBBind time-split benchmark.
-- Controlled ablations, five-seed analyses, structural-validity checks, and schedule-discretization tests.
 
 ## Overview
 
