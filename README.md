@@ -172,6 +172,7 @@ python inference_base.py \
 
 Replace `<RUN_ID>` and `<CHECKPOINT>` with the actual training run and checkpoint filename. The manuscript configuration uses 10 sampling steps, 40 candidates per complex, and random seed 42; confirm that the corresponding values are set in the inference configuration before reproducing the reported results.
 The inference script automatically outputs the results after completion.
+
 ### Default ReDiFlow schedules
 
 Each per-DOF schedule is independently normalized to sum to 1.
@@ -183,34 +184,6 @@ Each per-DOF schedule is independently normalized to sum to 1.
 | $\Delta t_{\mathrm{tor}}$ | 0.0539 | 0.0630 | 0.0878 | 0.1295 | 0.1657 | 0.1657 | 0.1295 | 0.0878 | 0.0630 | 0.0539 |
 
 Translation and rotation receive larger steps early in sampling for global placement, whereas torsion receives larger steps in the middle of the trajectory for conformational refinement.
-
-## Reproduction checklist
-
-Before the public release, the following items should be included or documented:
-
-- [ ] Exact environment or dependency-lock file.
-- [ ] Dataset download instructions and licenses.
-- [ ] Training, validation, and test split lists.
-- [x] Core preprocessing commands and expected input layout.
-- [ ] Training and inference configuration files.
-- [ ] Backbone and confidence-model checkpoints.
-- [ ] Commands used to reproduce each reported table or figure.
-- [ ] Random seeds and deterministic settings.
-- [ ] Evaluation scripts and PoseBusters configuration.
-
-## Third-party components
-
-This project uses or adapts third-party scientific software and model components. Before release, retain the corresponding copyright notices, licenses, and citations.
-
-| Component | Role in this repository | Upstream source/license | Local modifications |
-| --- | --- | --- | --- |
-| PyTorch | Model training and inference | `<ADD LINK AND LICENSE>` | None or `<DESCRIBE>` |
-| PyTorch Lightning | Training workflow | `<ADD LINK AND LICENSE>` | None or `<DESCRIBE>` |
-| e3nn | Equivariant geometric operations | `<ADD LINK AND LICENSE>` | None or `<DESCRIBE>` |
-| DiffDock-related components | Confidence scoring or adapted utilities, where applicable | `<ADD EXACT COMMIT AND LICENSE>` | `<DESCRIBE>` |
-| Other reused modules | `<DESCRIBE ROLE>` | `<ADD REPOSITORY, COMMIT, AND LICENSE>` | `<DESCRIBE>` |
-
-If a file is copied or substantially adapted from another repository, add a source comment in that file in addition to listing it here.
 
 ## Citation
 
