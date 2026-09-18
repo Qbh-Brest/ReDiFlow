@@ -16,6 +16,12 @@ ReDiFlow operates on a pre-trained docking backbone and does not modify the trai
 - Evaluation on PoseBusters, ASTEX Diverse, DockGen, and the PDBBind time-split benchmark.
 - Controlled ablations, five-seed analyses, structural-validity checks, and schedule-discretization tests.
 
+## Overview
+
+ReDiFlow is an inference-time framework for Riemannian flow-based molecular docking. It redistributes sampling progression and assigns separate effective times to ligand translation, rotation, and torsion, while keeping their updates coupled through the current molecular state.
+
+ReDiFlow uses a pretrained backbone without changing its parameters or training objective. The workflow consists of data preprocessing, loading the pretrained checkpoint, and running inference, which automatically outputs the results.
+
 ## Method overview
 
 Standard generative docking evolves translation, rotation, and torsion using one shared scalar time. ReDiFlow relaxes this constraint in two stages:
