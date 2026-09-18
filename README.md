@@ -36,25 +36,25 @@ At every sampling step, the pre-trained backbone is queried using the same curre
 
 ## Installation
 
-The exact environment file and tested package versions will be added with the finalized release. The main dependencies used by the current implementation include:
 The code was tested with:
+
 - Python 3.10.15
 - PyTorch 2.5.1+cu124
 - PyTorch Geometric 2.6.1
 - CUDA 12.4
 - RDKit 2026.03.1
 
-Create the environment using the file provided with the repository:
+Create and activate a Python environment:
 
 ```bash
-conda env create -f <ENVIRONMENT_FILE>
-conda activate <ENVIRONMENT_NAME>
+conda create -n rediflow python=3.10.15 -y
+conda activate rediflow
 ```
 
-Alternatively, if the final repository provides a requirements file:
+From the repository root, install the dependencies:
 
 ```bash
-pip install -r <REQUIREMENTS_FILE>
+pip install -r requirements.txt
 ```
 
 <!-- TODO(release): replace the placeholders with the real filenames and environment name. -->
