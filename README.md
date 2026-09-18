@@ -25,33 +25,6 @@ Standard generative docking evolves translation, rotation, and torsion using one
 
 At every sampling step, the pre-trained backbone is queried using the same current protein-ligand state. Each degree of freedom uses its own effective time, and the component-wise updates are then applied jointly. The dynamics are therefore temporally decoupled but state-coupled.
 
-## Current results
-
-The backbone used in the manuscript is trained on 383 PoseBusters complexes. Unless noted otherwise, inference uses 10 outer sampling steps and generates 40 candidate poses for each complex.
-
-### PoseBusters in-domain test set
-
-Success rate on the held-out set of 43 complexes:
-
-| Criterion | Top-1 | Top-5 | Top-10 | Best-of-40 |
-| --- | ---: | ---: | ---: | ---: |
-| Ligand RMSD < 2 A | 39.5% | 51.2% | 53.5% | 53.5% |
-| Ligand RMSD < 5 A | 79.1% | 95.3% | 95.3% | 100.0% |
-
-### External benchmarks
-
-Zero-shot or direct-transfer Top-1 success under ligand RMSD < 2 A:
-
-| Benchmark | Number of complexes | Top-1 success |
-| --- | ---: | ---: |
-| ASTEX Diverse | 85 | 25.9% |
-| DockGen | 330 | 10.0% |
-| PDBBind time-split | 363 | 18.5% |
-
-Cross-method comparisons should account for differences in training-set size, model architecture, pocket information, and evaluation protocol. The controlled ReDiFlow comparisons keep the backbone, initialization, candidate generation, and ranking procedure fixed and change only the temporal organization of sampling.
-
-<!-- TODO(release): verify every number against the final accepted manuscript. -->
-
 ## Installation
 
 The exact environment file and tested package versions will be added with the finalized release. The main dependencies used by the current implementation include:
