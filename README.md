@@ -24,7 +24,6 @@ ReDiFlow uses a pretrained backbone without changing its parameters or training 
 <p align="center">
 <img src="data/img.png" width="600">
 </p>
-*Figure caption 这里写图注*
 
 ## Method overview
 
