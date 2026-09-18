@@ -21,6 +21,19 @@ Standard generative docking evolves translation, rotation, and torsion using one
 
 At every sampling step, the pre-trained backbone is queried using the same current protein-ligand state. Each degree of freedom uses its own effective time, and the component-wise updates are then applied jointly. The dynamics are therefore temporally decoupled but state-coupled.
 
+## Content
+- [Installation](#installation)
+- [Data preparation](#data-preparation)
+  - [Existing datasets](#existing-datasets)
+  - [Expected input structure](#expected-input-structure)
+  - [Extract protein sequences](#extract-protein-sequences)
+  - [Generate ESM-2 embeddings](#generate-ESM-2-embeddings)
+  - [Merge protein embeddings](#merge-protein-embeddings)
+  - [Build processed molecular data](#build-processed-molecular-data)
+- [Inference](#inference)
+  - [Default ReDiFlow schedules](#default-ReDiFlow-schedules)
+- [Citation](#citation)
+
 ## Installation
 
 The code was tested with:
@@ -77,7 +90,7 @@ data/PDBBind/
 
 The same workflow can be applied to PoseBusters, ASTEX Diverse, DockGen, or another dataset by changing the input and output paths. If a dataset provides ligands in `.mol`, `.mol2`, or another format, convert them to SDF or update the molecular loader accordingly.
 
-### Step 1: Extract protein sequences
+### Extract protein sequences
 
 Extract the receptor sequences from the raw protein structures and write them to one FASTA file:
 
@@ -93,7 +106,7 @@ Output:
 data/PDBBind_sequences.fasta
 ```
 
-### Step 2: Generate ESM-2 embeddings
+### Generate ESM-2 embeddings
 
 Use the ESM-2 `esm2_t33_650M_UR50D` model and extract representations from layer 33:
 
@@ -112,7 +125,7 @@ This creates one raw embedding file for each protein sequence under:
 data/PDBBind_esm2_embeddings_raw/
 ```
 
-### Step 3: Merge protein embeddings
+### Merge protein embeddings
 
 Merge the individual ESM-2 outputs into a single PyTorch file:
 
@@ -128,7 +141,7 @@ Output:
 data/PDBBind_esm2_embeddings.pt
 ```
 
-### Step 4: Build processed molecular data
+### Build processed molecular data
 
 Combine the raw structures and merged protein embeddings into the processed dataset used by the model:
 
