@@ -1,23 +1,13 @@
 # ReDiFlow:Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking
 
-ReDiFlow is an inference-time temporal redistribution and decoupling framework for Riemannian flow-based molecular docking. It allows ligand translation, global rotation, and internal torsion to follow different effective generative times while remaining coupled through the same molecular state.
-
-ReDiFlow operates on a pre-trained docking backbone and does not modify the training objective or learned model parameters. The current implementation uses non-uniform schedules to reorganize the sampling trajectory at inference time.
-
-<!-- TODO(release): add the paper, model checkpoint, and dataset links. -->
-
-## Highlights
-
-- Inference-time modification with no additional backbone training.
-- Separate effective clocks for translation, rotation, and torsion.
-- State-coupled updates on the product space $\mathbb{R}^3 \times \mathrm{SO}(3) \times \mathbb{T}^m$.
-- Evaluation on PoseBusters, ASTEX Diverse, DockGen, and the PDBBind time-split benchmark.
 
 ## Overview
 
-ReDiFlow is an inference-time framework for Riemannian flow-based molecular docking. It redistributes sampling progression and assigns separate effective times to ligand translation, rotation, and torsion, while keeping their updates coupled through the current molecular state.
+ReDiFlow is an inference-time framework for Riemannian flow-based molecular docking. It combines non-uniform temporal redistribution with separate effective clocks for ligand translation, global rotation, and internal torsion.
 
-ReDiFlow uses a pretrained backbone without changing its parameters or training objective. The workflow consists of data preprocessing, loading the pretrained checkpoint, and running inference, which automatically outputs the results.
+At each sampling step, the three components are evaluated at their respective effective times using the same current molecular state, and their updates are applied jointly. This allows different temporal progressions while preserving geometric coupling between the components.
+
+ReDiFlow operates on a pretrained docking backbone without changing its parameters or training objective.
 <p align="center">
 <img src="data/img.png" width="600">
 </p>
