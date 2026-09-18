@@ -149,36 +149,6 @@ data/PDBBind_processed/
 
 During molecular graph construction, the current implementation removes hydrogen atoms, uses atomic number and chirality as node features, and constructs distance-based ligand and ligand-receptor edges. The reference setup uses a 5.0 A atom-level interaction cutoff, at most 8 nearest neighbors per atom, a 15.0 A receptor-pocket radius, and up to 24 nearest receptor C-alpha neighbors.
 
-## Training
-
-ReDiFlow itself is applied at inference time. The reference docking backbone is an E(3)-equivariant graph network with five stacked equivariant graph convolutional layers and separate tangent-velocity heads for translation, rotation, and torsion.
-
-The training setup reported in the current manuscript is:
-
-| Setting | Value |
-| --- | --- |
-| Objective | Riemannian flow-matching loss |
-| Optimizer | Adam |
-| Base learning rate | $1 \times 10^{-3}$ |
-| Weight decay | $1 \times 10^{-5}$ |
-| Batch size | 1 complex per GPU |
-| Maximum epochs | 200 |
-| Validation interval | 10 epochs |
-| Early-stopping patience | 100 epochs |
-| Precision | bf16 mixed precision |
-| Reference hardware | One NVIDIA RTX 3060 GPU |
-
-Temporary command template:
-
-```bash
-python <TRAIN_ENTRYPOINT> \
-  --config <TRAIN_CONFIG> \
-  --data-dir <PROCESSED_DATA_DIR> \
-  --output-dir <CHECKPOINT_DIR>
-```
-
-<!-- TODO(release): add the exact configuration, split file, checkpoint-selection rule, and command used for the reported model. -->
-
 ## Inference
 
 Initial ligand poses are generated through random rigid-body and torsional perturbations without native pocket information. The reference protocol generates 40 candidates per complex, applies 10 outer sampling steps, and ranks the resulting poses using a confidence model.
