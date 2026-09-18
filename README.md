@@ -162,7 +162,7 @@ python inference_base.py \
 ```
 
 Replace `<RUN_ID>` and `<CHECKPOINT>` with the actual training run and checkpoint filename. The manuscript configuration uses 10 sampling steps, 40 candidates per complex, and random seed 42; confirm that the corresponding values are set in the inference configuration before reproducing the reported results.
-
+The inference script automatically outputs the results after completion.
 ### Default ReDiFlow schedules
 
 Each per-DOF schedule is independently normalized to sum to 1.
@@ -174,27 +174,6 @@ Each per-DOF schedule is independently normalized to sum to 1.
 | $\Delta t_{\mathrm{tor}}$ | 0.0539 | 0.0630 | 0.0878 | 0.1295 | 0.1657 | 0.1657 | 0.1295 | 0.0878 | 0.0630 | 0.0539 |
 
 Translation and rotation receive larger steps early in sampling for global placement, whereas torsion receives larger steps in the middle of the trajectory for conformational refinement.
-
-## Evaluation
-
-The manuscript reports:
-
-- Ligand heavy-atom RMSD without additional rigid-body alignment.
-- Ligand centroid distance.
-- Top-1, Top-5, Top-10, and best-of-40 success rates.
-- PoseBusters structural-validity checks.
-
-Temporary command template:
-
-```bash
-python <EVALUATION_ENTRYPOINT> \
-  --predictions <PREDICTION_DIR> \
-  --references <REFERENCE_STRUCTURE_DIR> \
-  --run-posebusters \
-  --output <METRICS_FILE>
-```
-
-<!-- TODO(release): document symmetry handling, file formats, failed-complex handling, and the exact PoseBusters configuration. -->
 
 ## Reproduction checklist
 
