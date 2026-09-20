@@ -202,7 +202,7 @@ Citation information will be added when the manuscript is publicly available.
   title   = {ReDiFlow: Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking},
   author  = {<AUTHOR LIST>},
   journal = {<VENUE OR PREPRINT>},
-  year    = {<YEAR>}
+  year    = {2026}
 }
 ```
 
