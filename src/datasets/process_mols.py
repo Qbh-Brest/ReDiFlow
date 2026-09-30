@@ -18,7 +18,7 @@ from torch_cluster import radius_graph
 
 
 import torch.nn.functional as F
-from torch_geometric.data import HeteroData     ##非源
+from torch_geometric.data import HeteroData     
 
 from project_mine.src.datasets.conformer_matching import get_torsion_angles, optimize_rotatable_bonds
 from project_mine.src.utils2.torsion import get_transformation_mask
@@ -577,27 +577,27 @@ def read_mols(pdbbind_dir, name, remove_hs=False):
 	return ligs
 
 
-from tqdm import tqdm  # 如果没有装 tqdm，运行 pip install tqdm
+from tqdm import tqdm  
 
 if __name__ == '__main__':
-	# ================= 配置路径 =================
+	# ================= Configuration path =================
 	#data_root = r'D:\PythonProject medicine\project_mine\data\posebusters_benchmark_set'
 
 	data_root = r'D:\PythonProject medicine\project_mine\data\PDBBind'
 	embeddings_file = r'D:\PythonProject medicine\project_mine\data/PDBBind_esm2_embeddings.pt'
 
-	# 结果保存路径
+	# save path
 	save_dir = r'D:\PythonProject medicine\project_mine\data\PDBBind_processed'
 	os.makedirs(save_dir, exist_ok=True)
 
-	# 错误日志路径
+	# Error log path
 	error_log_path = os.path.join(save_dir, "processing_errors_PDBBind_set.txt")
 	if os.path.exists(error_log_path): os.remove(error_log_path)
 	# ===========================================
 
 	print(f"1. Loading ESM Embeddings from {embeddings_file} ...")
 	if not os.path.exists(embeddings_file):
-		raise FileNotFoundError(f"找不到 Embedding 文件: {embeddings_file}")
+		raise FileNotFoundError(f"Embedding file not found: {embeddings_file}")
 
 	all_embeddings = torch.load(embeddings_file, map_location='cpu')
 	print("ESM Embeddings loaded.")
@@ -617,13 +617,8 @@ if __name__ == '__main__':
 
 		save_path = os.path.join(save_dir, f"{name}.pt")
 
-		# 如果你想重新生成优化后的数据，请注释掉下面这两行！
-		# if os.path.exists(save_path) and os.path.getsize(save_path) > 100:
-		#     success_count += 1
-		#     continue
-
 		try:
-			# 1. 匹配 Chain Embedding (保持不变)
+			# Match chain Embedding
 			relevant_keys = []
 			for k in all_embedding_keys:
 				if k.startswith(f"{name}_chain_"):
@@ -634,25 +629,24 @@ if __name__ == '__main__':
 				if name in all_embeddings:
 					lm_embedding_chains = [all_embeddings[name]]
 				else:
-					# 如果找不到 Embedding，这里可以选择跳过，或者用全0填充防止报错
 					# raise ValueError(f"No embeddings found for ID: {name}")
-					lm_embedding_chains = None  # 暂时允许 None，后续代码兼容
+					lm_embedding_chains = None  # None
 			else:
 				lm_embedding_chains = [all_embeddings[k] for k in relevant_keys]
 
-			# 2. 解析受体
+			# Parse receptor
 			rec = parse_receptor(name, data_root)
 
-			# 3. 解析配体
+			# Parse ligand
 			lig = read_mol(data_root, name, remove_hs=False)
 			if lig is None: raise ValueError("Failed to read ligand")
 
-			# 4. 提取结构
+			# Extract structure
 			rec, coords, c_alpha_coords, n_coords, c_coords, lm_embeddings = extract_receptor_structure(
 				rec, lig, lm_embedding_chains=lm_embedding_chains
 			)
 
-			# 5. 构建图
+			# Construct graph
 			complex_graph = HeteroData()
 			complex_graph['name'] = name
 			complex_graph.id = name
@@ -664,10 +658,10 @@ if __name__ == '__main__':
 			complex_graph['ligand'].edge_mask = torch.tensor(edge_mask)
 			complex_graph['ligand'].mask_rotate = mask_rotate
 			# -----------------------------------------------------------
-			# 🚨【核心修改】限制最大邻居数，防止边数爆炸 🚨
+			# 🚨Limit max neighbor count to prevent edge explosion 🚨
 			# -----------------------------------------------------------
 			rec_radius = 20
-			max_neighbors = 20  # 建议设置为 16~24，既保留局部信息又轻量
+			max_neighbors = 20  
 
 			get_rec_graph(
 				rec, coords, c_alpha_coords, n_coords, c_coords, complex_graph,
@@ -675,14 +669,14 @@ if __name__ == '__main__':
 				c_alpha_max_neighbors=max_neighbors,
 				all_atoms=True,
 				atom_radius=5,
-				atom_max_neighbors=20,  # 可以自己调
+				atom_max_neighbors=20,  
 				remove_hs=False,
 				lm_embeddings=lm_embeddings
 			)
 
 			# -----------------------------------------------------------
 
-			# 6. 保存
+			# save
 			torch.save(complex_graph, save_path)
 			success_count += 1
 
