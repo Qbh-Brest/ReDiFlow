@@ -102,7 +102,7 @@ def PB_valid(complex_name, ligand_pose,pose_file = None):
 	protein = base / f"{complex_name}_protein.pdb"
 	pred_ligand = base / f"{complex_name}_pred_pose.sdf"
 
-	# 1. 先把预测坐标写成 SDF
+	# 1. First save predicted coordinates as SDF
 	if str(ref_ligand).endswith('.pdb'):
 		mol = Chem.MolFromPDBFile(str(ref_ligand), removeHs=False)
 		if mol is not None:
@@ -121,12 +121,12 @@ def PB_valid(complex_name, ligand_pose,pose_file = None):
 			ligand_pose=ligand_pose,
 			out_sdf=rescore_pose_file,
 		)
-	# 2. 再用 PoseBusters 检查
+	# 2. Then check with PoseBusters
 	import contextlib
 	import io
 	import sys
 
-	# 用一个空的 StringIO 或直接 /dev/null 来接收 stderr
+	# Redirect stderr to empty StringIO or /dev/null
 	stderr_capture = io.StringIO()
 	with contextlib.redirect_stderr(stderr_capture):
 		df = buster.bust(
@@ -135,11 +135,11 @@ def PB_valid(complex_name, ligand_pose,pose_file = None):
 			mol_cond=str(protein),
 			full_report=True,
 		)
-	# 如果你想知道警告内容，可以打印 stderr_capture.getvalue()，否则直接忽略
+	# Print stderr_capture.getvalue() for warnings;ignore otherwise
 	check_cols_exist = [c for c in check_cols if c in df.columns]
 	physical_cols_exist = [c for c in physical_cols if c in df.columns]
 
-	# 注意：这里如果你希望 NaN 算失败，建议用 fillna(False)
+	# Note: Use fillna(False) if NaN counts as failure
 	df["posebusters_valid"] = df[check_cols_exist].fillna(False).all(axis=1)
 	df["physical_valid"] = df[physical_cols_exist].fillna(False).all(axis=1)
 
