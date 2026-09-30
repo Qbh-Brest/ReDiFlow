@@ -23,14 +23,14 @@ from project_mine.compute_energy_curve import save_simple_complex_all
 from project_mine.merge_pose_sdfs import merge_pose_sdfs, write_complex_manifest
 from project_mine.model import LearnableTimeBudget
 from project_mine.pb_valid import PB_valid
-# 假设这些是你的项目内部引用，请根据实际情况保留
+
 from project_mine.src.utils.pylogger import RankedLogger
 from project_mine.src.models.get_model import get_vector_field
 torch.autograd.set_detect_anomaly(True)
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
-# 显存优化配置：允许碎片内存重组
+# VRAM optimization:enable memory defragmentation
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128,expandable_segments:True"
 # ===== [TOR-TARGET CHECK UTILS] BEGIN =====
@@ -51,7 +51,7 @@ def _ang_diff(a, b):
 	return torch.atan2(torch.sin(d), torch.cos(d))
 
 def _build_adj(num_nodes, edges_2col):
-	# edges_2col: [E,2], 无向图按双向加入邻接
+	# edges_2col: [E,2], Undirected graph:add edges bidirectionally to adjacency
 	adj = [[] for _ in range(num_nodes)]
 	for i in range(edges_2col.shape[0]):
 		u = int(edges_2col[i, 0].item())
@@ -61,9 +61,7 @@ def _build_adj(num_nodes, edges_2col):
 	return adj
 # ===== [TOR-TARGET CHECK UTILS] END =====
 
-# ==============================================================================
-# 1. 物理计算核心: 极速版原子速度计算 (向量化 Torsion)
-# ==============================================================================
+
 from torch_scatter import scatter
 
 from torch_geometric.utils import to_dense_batch
@@ -75,31 +73,27 @@ from torch_scatter import scatter_mean
 
 def modify_conformer_torsion_angles_torch(pos, edge_index, mask_rotate, torsion_updates, batch_idx,
 										  is_reverse_order=False):
-	"""严格按照作者逻辑修改的扭转执行函数（新增反转旋转顺序功能）"""
 	new_pos = pos.clone()
 
-	# 1. 【原作者逻辑】记录初始质心 (shift_center_back 准备)
+	# Record initial centroid
 	pos_mean = scatter_mean(pos, batch_idx, dim=0)[batch_idx]
 
-	# ========== 仅新增：根据is_reverse_order确定旋转顺序 ==========
-	# 正向：0→1→2→...→n-1（原逻辑）；反向：n-1→n-2→...→0
+	# ========== Determine rotation order based on is_reverse_order ==========
+	
 	rot_bond_range = range(edge_index.shape[0]) if not is_reverse_order else range(edge_index.shape[0] - 1, -1, -1)
 
-	# 把原来的 range(edge_index.shape[0]) 换成 rot_bond_range
 	for i in rot_bond_range:
 		u, v = edge_index[i, 0], edge_index[i, 1]
 
-		# 2. 【原作者逻辑】约定正向旋转：rot_vec = pos[u] - pos[v]
+		# Forward rotation by convention：rot_vec = pos[u] - pos[v]
 		rot_vec = new_pos[u] - new_pos[v]
 
-		# 3. 【原作者逻辑】单位化并乘以角速度(转速) -> 得到真正的旋转向量
+		# Normalize and multiply by angular velocity
 		rot_vec = rot_vec * torsion_updates[i] / (torch.linalg.norm(rot_vec)+1e-8)
 
-		# 4. 利用现成的 axis_angle 转换函数生成旋转矩阵 (类似原作者的 rotvec_to_rotmat)
-		# 注意：传入 shape 需要是 [1, 3] 以匹配批量转换函数，算完再 squeeze 变回 [3, 3]
+		# Generate rotation matrix
 		rot_mat = axis_angle_to_matrix(rot_vec.unsqueeze(0)).squeeze(0)
 
-		# 处理 mask 格式
 		m = mask_rotate[i]
 		if isinstance(m, torch.Tensor):
 			m = m.bool().view(-1)
@@ -107,18 +101,16 @@ def modify_conformer_torsion_angles_torch(pos, edge_index, mask_rotate, torsion_
 			m = torch.tensor(m, device=pos.device, dtype=torch.bool).view(-1)
 
 		if m.any():
-			# 5. 【原作者逻辑】以 v 为枢轴旋转: (pos[mask] - pos[v]) @ rot_mat.T + pos[v]
+			# Rotate around pivot v
 			diff = new_pos[m] - new_pos[v]
 			rotated_diff = torch.mm(diff, rot_mat.t())
 			new_pos[m] = rotated_diff + new_pos[v]
 
-	# 6. 【原作者逻辑核心】shift_center_back：强行抵消扭转带来的质心偏移！
 	new_mean = scatter_mean(new_pos, batch_idx, dim=0)[batch_idx]
 	new_pos = new_pos - new_mean + pos_mean
 
 	return new_pos
 
-# 辅助函数保持原样，完全没问题
 def axis_angle_to_matrix(axis_angle, eps=1e-6):
 	orig_dtype = axis_angle.dtype
 	x = axis_angle.to(torch.float32)
@@ -141,7 +133,6 @@ def axis_angle_to_matrix(axis_angle, eps=1e-6):
 
 	R = I + sin_a * K + (1.0 - cos_a) * torch.bmm(K, K)
 
-	# 对非常小角度，直接置为 I 更稳
 	small = (torch.norm(x, dim=-1) < eps)
 	if small.any():
 		R[small] = torch.eye(3, device=x.device, dtype=x.dtype)
@@ -153,13 +144,11 @@ import torch
 from torch.cuda.amp import autocast
 
 
-# 强制在此函数内部禁用混合精度，全部使用 float32 进行安全计算
 @autocast(enabled=False)
 def find_rigid_alignment(pos_a, pos_b):
-	"""计算从 pos_a 到 pos_b 的最佳刚体变换 (旋转矩阵和平移向量)"""
+	"""Compute optimal rigid transform from pos_a to pos_b"""
 	orig_dtype = pos_a.dtype
 
-	# 因为关闭了 autocast，这里转为 float32 后绝不会再被系统偷偷转成 Half
 	pos_a_f32 = pos_a.to(torch.float32)
 	pos_b_f32 = pos_b.to(torch.float32)
 
@@ -181,7 +170,6 @@ def find_rigid_alignment(pos_a, pos_b):
 	rot = V @ U.T
 	tr = b_mean
 
-	# 计算完毕，安全转回原本的数据类型
 	return rot.to(orig_dtype), tr.to(orig_dtype)
 
 
@@ -248,7 +236,7 @@ import torch
 
 def normalize_mask_rotate(mask_rotate, device):
 	"""
-	把各种奇怪格式的 mask_rotate 统一成 bool tensor: [num_rotatable_edges, num_atoms]
+	bool tensor: [num_rotatable_edges, num_atoms]
 	"""
 
 	def to_1d_bool_tensor(x):
@@ -262,7 +250,7 @@ def normalize_mask_rotate(mask_rotate, device):
 		# numpy array
 		if isinstance(x, np.ndarray):
 			if x.dtype == np.object_:
-				# object array -> 先转 list，再递归
+				# object array
 				x = x.tolist()
 				return to_1d_bool_tensor(x)
 			else:
@@ -273,7 +261,6 @@ def normalize_mask_rotate(mask_rotate, device):
 
 		# list / tuple
 		if isinstance(x, (list, tuple)):
-			# 如果里面还是嵌套对象，先逐个展开
 			elems = []
 			for item in x:
 				t = to_1d_bool_tensor(item)
@@ -286,18 +273,14 @@ def normalize_mask_rotate(mask_rotate, device):
 			if len(elems) == 0:
 				return torch.empty(0, dtype=torch.bool, device=device)
 
-			# 如果这是一个“单条 mask 被包了一层”的情况
-			# 例如 [array([True, False, ...])]
+			# [array([True, False, ...])]
 			if len(elems) == 1:
 				return elems[0]
 
-			# 否则把它们拼成一维
 			return torch.cat([e.reshape(-1) for e in elems], dim=0).bool()
 
-		# 标量
 		return torch.as_tensor(x, device=device).bool().view(-1)
 
-	# 顶层统一
 	if isinstance(mask_rotate, torch.Tensor):
 		mask_rotate = mask_rotate.to(device).bool()
 		if mask_rotate.dim() == 1:
@@ -313,9 +296,8 @@ def normalize_mask_rotate(mask_rotate, device):
 		else:
 			mask_rotate = mask_rotate.tolist()
 
-	# 顶层 list/tuple：每个元素对应一条 rotatable edge 的 mask
 	if isinstance(mask_rotate, (list, tuple)):
-		# ===== 关键补丁：DataLoader 常见情况，外面只包了一层 =====
+
 		if len(mask_rotate) == 1:
 			first = mask_rotate[0]
 
@@ -332,7 +314,7 @@ def normalize_mask_rotate(mask_rotate, device):
 					return first
 				if first.dim() == 1:
 					return first.unsqueeze(0)
-		# ===== 补丁结束 =====
+		
 		rows = []
 		for m in mask_rotate:
 			row = to_1d_bool_tensor(m).bool().reshape(-1)
@@ -341,7 +323,6 @@ def normalize_mask_rotate(mask_rotate, device):
 		if len(rows) == 0:
 			return torch.empty((0, 0), dtype=torch.bool, device=device)
 
-		# 检查每行长度一致
 		n_atoms = rows[0].numel()
 		for i, r in enumerate(rows):
 			if r.numel() != n_atoms:
@@ -362,7 +343,7 @@ def apply_transform(pos_0, tr_pred, rot_pred, tor_pred, batch_idx, t_scale, data
 	R_mat = axis_angle_to_matrix(rot_t)
 	pos_working = (pos_working-pos_working.mean(0))@R_mat + tr_pred + pos_working.mean(0)
 	pos_working = pos_working.squeeze(0)
-	# --- 第一步：应用扭转 (Torsion) ---
+	# --- (Torsion) ---
 	ligand_edge_key = ('ligand', 'ligand')
 	if ligand_edge_key not in data.edge_types:
 		ligand_edge_key = ('ligand', 'lig_bond', 'ligand') if ('ligand', 'lig_bond',
@@ -389,12 +370,9 @@ def apply_transform(pos_0, tr_pred, rot_pred, tor_pred, batch_idx, t_scale, data
 				pos_final = modify_conformer_torsion_angles_torch(
 					pos_working, rotatable_edges, mask_rotate, torsion_updates, batch_idx=l_batch
 				)
-	# --- 第二步：旋转 (Rotation) 与 第三步：平移 (Translation) ---
-	# 【原作者逻辑对齐】: (pos - pos_mean) @ rot.T + tr (注意原作者说 tr 直接是新质心)
-	# --- 这里我们进行一个判断，因为在其他作者的论文中他们的推理都是经过刚体对齐的，所以这里如果是验证我们就在扭转后加一个刚体对齐来抵消扭转误差
+	# --- (Rotation) and (Translation) ---
 	# -----------------------------------------------------------------------------------------------------------------
 	if hasattr(data['ligand'], 'edge_mask') and data['ligand'].edge_mask.sum() > 0:
-	# 如果 edge_mask 中有任何一个 True，说明有可旋转键
 
 		R, t = rigid_transform_Kabsch_3D_torch(pos_final.T, pos_working.T)
 
@@ -406,7 +384,7 @@ def apply_transform(pos_0, tr_pred, rot_pred, tor_pred, batch_idx, t_scale, data
 
 
 # ==============================================================================
-# 3. 主模型定义 (Base_FM_Model)
+# (Base_FM_Model)
 # ==============================================================================
 
 class Base_FM_Model(LightningModule):
@@ -415,12 +393,12 @@ class Base_FM_Model(LightningModule):
 		self.args = args
 		self.model_macro = get_vector_field(args)
 		self.loss_mse = nn.MSELoss(reduction='none')
-		self.num_frames = 11  # 固定 11 帧
-		# 权重超参数
+		self.num_frames = 11  
+		
 		self.fm_weight = getattr(args, 'fm_weight', 1.0)
 		self.density_weight = getattr(args, 'density_weight', 0.1)
 		self.ema_macro = None
-		# EMA Setup (如果需要的话，给微观模型加上 EMA，宏观往往不需要因为目标是线性的很简单)
+		# EMA Setup 
 		if self.args.use_ema:
 			avg_fn = torch.optim.swa_utils.get_ema_multi_avg_fn(self.args.ema_rate)
 			self.ema_macro = torch.optim.swa_utils.AveragedModel(self.model_macro, multi_avg_fn=avg_fn)
@@ -430,8 +408,7 @@ class Base_FM_Model(LightningModule):
 
 		self.num_steps = self.num_frames - 1
 		self.uniform_dt = 1.0 / self.num_steps
-
-		# 三个自由度分别学自己的时间预算
+		#Three different budgets
 		self.tr_time_budget = LearnableTimeBudget(self.num_steps, init_mode='middle_fast')
 		self.rot_time_budget = LearnableTimeBudget(self.num_steps, init_mode='middle_fast')
 		self.tor_time_budget = LearnableTimeBudget(self.num_steps, init_mode='middle_fast')
@@ -440,7 +417,7 @@ class Base_FM_Model(LightningModule):
 		self.confidence_model = None
 
 		self.save_hyperparameters(logger=True)
-		# 开启手动优化，接管梯度回传，极致节省显存！
+		
 		self.automatic_optimization = False
 		self.scaler = torch.cuda.amp.GradScaler(init_scale=1.0, growth_interval=1000)
 
@@ -491,11 +468,11 @@ class Base_FM_Model(LightningModule):
 		tor_macro = tor_macro.detach()
 		del tr_macro, rot_macro, tor_macro
 
-		# 反缩放后再检查梯度
+		# Check gradient after inverse scaling
 		self.scaler.unscale_(opt)
 
 
-		# 可选：记录关键层 grad norm
+		# Optional:record grad norm of key layers
 		# self._log_named_grad_norms()
 
 		self.clip_gradients(opt, gradient_clip_val=1, gradient_clip_algorithm="norm")
@@ -513,99 +490,9 @@ class Base_FM_Model(LightningModule):
 
 		return total_loss.detach()
 
-	def validation_step(self, data, batch_idx):
-		batch_size = data.num_graphs
-		device = data['ligand'].pos.device
-		l_batch = data['ligand'].batch
-
-		x0 = data['ligand'].initial_pos.clone()
-		gt_pos = data['ligand'].gt_pos
-
-
-		docking_rmsd_init = torch.sqrt(scatter(torch.sum((x0-gt_pos) ** 2, -1), l_batch, reduce='mean') + 1e-8).mean()
-		#print(f"rmsd_init:{docking_rmsd_init}")
-		current_pos = x0.clone()
-
-		total_steps = self.num_frames - 1
-		total_steps = total_steps
-		dt = 1.0 / total_steps  # 积分时间步长
-
-		self.eval()
-		with torch.no_grad():
-			for i in range(0, total_steps):
-				t_val = i / total_steps
-				t_tensor = torch.full((batch_size,), t_val, device=device)
-
-				data['ligand'].pos = current_pos
-
-				data.complex_t = {'tr': t_tensor, 'rot': t_tensor, 'tor': t_tensor}
-				data['ligand'].node_t = {'tr': t_tensor[l_batch], 'rot': t_tensor[l_batch], 'tor': t_tensor[l_batch]}
-
-				if 'receptor' in data.node_types:
-					r_batch = data['receptor'].batch if hasattr(data['receptor'], 'batch') else torch.zeros(
-						data['receptor'].num_nodes, device=device).long()
-					data['receptor'].node_t = {'tr': t_tensor[r_batch], 'rot': t_tensor[r_batch],
-											   'tor': t_tensor[r_batch]}
-
-				with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
-					# 宏观推理
-					tr_v, rot_v, tor_v = self.forward(data, training=False)
-				#print(f"===========\nODE:{i},tr_v:{tr_v}")#, rot_v:{rot_v}, tor_v:{tor_v}")
-				#print(f"ODE:{i},u_tr:{data['ligand'].u_tr}\n===========")#,u_rot:{data['ligand'].u_rot},u_tor:{data['ligand'].u_tor}")
-
-				alpha = (tr_v*data['ligand'].u＿tr) / (data['ligand'].u＿tr * data['ligand'].u＿tr)
-				#print(f"Ode:{i},alpha:{alpha}")
-				has_torsion = False
-				if hasattr(data['ligand'], 'edge_mask'):
-					# 如果 edge_mask 中有任何一个 True，说明有可旋转键
-					if data['ligand'].edge_mask.sum() > 0:
-						has_torsion = True
-
-				if not has_torsion:
-					# 如果没有扭转键，将 tor_v 重置为 0，防止噪声干扰
-					tor_v = torch.zeros_like(tor_v)
-
-				# 【核心】：推理阶段更新位置，必须是 速度 * dt！
-				dummy_t_scale = torch.ones(batch_size, device=device)
-
-				#current_pos_mean = current_pos.mean(0)
-				current_pos = apply_transform(
-					current_pos,
-					tr_v * dt,  # 平移速度 * 时间步长 = 实际位移
-					rot_v * dt,  # 旋转速度 * 时间步长 = 实际旋转角
-					tor_v * dt,  # 扭转速度 * 时间步长 = 实际扭转形变
-					l_batch, dummy_t_scale, data
-				)
-
-				#print(f"关系2：ODE：{i}，{current_pos.mean(0) - current_pos_mean-tr_v*dt}")
-
-			data['ligand'].pos = current_pos
-
-			# 检查新坐标有没有异常
-			if torch.isnan(current_pos).any() or torch.isinf(current_pos).any():
-				print(f"⚠️ 推理坐标异常！epoch={self.current_epoch}, global_step={self.global_step}, val_batch_idx={batch_idx}, rollout_step={i}")
-				print(f"current_pos abs max: {current_pos.abs().max().item():.6f}")
-				print(f"tr_v abs max: {tr_v.abs().max().item():.6f}")
-				print(f"rot_v abs max: {rot_v.abs().max().item():.6f}")
-				print(f"tor_v abs max: {tor_v.abs().max().item():.6f}")
-				raise RuntimeError("Validation current_pos has NaN/Inf")
-
-			# 最终计算 RMSD
-
-			docking_rmsd, mode = compute_symmetry_rmsd_from_complex_graph(data)
-			#print(f"质心差：{data['ligand'].pos.mean(0)-gt_pos.mean(0)}")
-			print("rmsd =", docking_rmsd)
-
-
-			self.log('val/docking_rmsd', docking_rmsd, on_epoch=True, batch_size=batch_size, sync_dist=True)
-			self.log('val/loss', docking_rmsd, on_epoch=True, batch_size=batch_size, sync_dist=True)
-
-		return docking_rmsd
-
-
 	def test_step(self, data, batch_idx):
 		if data.complex_name[0] != "6a72_1_9UX_0":
-			return None                                 #第274个有问题，第273个复合物名字叫2hnu_2_PHE-TYR_1
+			return None                                 
 		batch_size = data.num_graphs
 		device = data['ligand'].pos.device
 		l_batch = data['ligand'].batch
@@ -645,11 +532,11 @@ class Base_FM_Model(LightningModule):
 		tr_dt_all = tr_dt_all / tr_dt_all.sum()
 
 
-		# rot_dt_all = torch.tensor(
-		# 	[0.13, 0.13, 0.12, 0.12, 0.11,
-		# 	 0.10, 0.09, 0.08, 0.07, 0.05],
-		# 	device="cuda:0"
-		# )
+		rot_dt_all = torch.tensor(
+			[0.13, 0.13, 0.12, 0.12, 0.11,
+			 0.10, 0.09, 0.08, 0.07, 0.05],
+			device="cuda:0"
+		)
 		#rot_dt_all = rot_dt_all.repeat_interleave(2) / 2
 
 		#rot_dt_all = rot_dt_all.reshape(5, 2).sum(dim=1)
@@ -710,7 +597,7 @@ class Base_FM_Model(LightningModule):
 						dummy_t_scale,
 						data
 					)
-				# 重新赋值给 confidence model0
+				
 				t_tensor = torch.full((batch_size,), t_test, device=device)
 				data.complex_t = {'tr': t_tensor, 'rot': t_tensor, 'tor': t_tensor}
 				data['ligand'].node_t = {
@@ -748,7 +635,7 @@ class Base_FM_Model(LightningModule):
 				centroid_distances.append(float(centroid_dist.item()))
 				valid_rates.append(float(valid_rate.item()))
 				physical_valid_rates.append(float(physical_valid_rate.item()))
-				# 统计保存数据
+				# Compute stats and save data
 		# 		records.append({
 		# 			"complex_name": data.complex_name[0],
 		# 			"pose_id": n,
@@ -763,7 +650,7 @@ class Base_FM_Model(LightningModule):
 		# 					   complex_id= data.complex_name[0],receptor_name= f"{data.complex_name[0]}_protein",poses_name= f"{data.complex_name[0]}_ligands_process")
 		# merge_pose_sdfs(pose_files = f"D:/PythonProject medicine/project_mine/data/posebusters_benchmark_set/{data.complex_name[0]}/rescoring_poses",
 		# 				output_sdf=f"D:/PythonProject medicine/project_mine/data/posebusters_benchmark_set/{data.complex_name[0]}/{data.complex_name[0]}_ligands_process.sdf")
-		# 统计保存数据
+		# Compute stats and save data
 		confidence_arr = np.array(confidence_list)
 		rmsds_arr = np.array(rmsds_list)
 		print(f"complex_name: {data['complex_name'][0]},key_numbers:{tor_v.shape if has_torsion else 0}")
@@ -781,7 +668,7 @@ class Base_FM_Model(LightningModule):
 		# with open(r"D:\PythonProject medicine\project_mine\rescore_gnina_colab\content_5\posebusters_gnina_scores_8888\reorder_map.json","r", encoding="utf-8") as f:
 		# 	reorder_map = json.load(f)
 		# re_order = np.array(reorder_map[data.complex_name[0]], dtype=np.int64)
-		# confidence_arr = confidence_arr[re_order]       ##如果上面是用的重打分那这里的分数并不代表真正的分数，出于某种原因我们没有修改它，但这不影响实验结果
+		# confidence_arr = confidence_arr[re_order]       
 		# ==================RESCORE_GNINA===================
 		rmsds_arr = rmsds_arr[re_order]
 		print(f"rmsds:{rmsds_arr}")
@@ -795,23 +682,23 @@ class Base_FM_Model(LightningModule):
 		top10_best_rmsd = float(np.min(rmsds_arr[:10])) if len(rmsds_arr) >= 10 else float(np.min(rmsds_arr))
 		best_rmsd = float(np.min(rmsds_arr))
 		rotatable_bonds = tor_v.shape if has_torsion else 0
-		# # top1 固定第0号
+		# # top1 
 		# top1_rmsd = float(rmsds_arr[0])
 		# top1_conf = float(confidence_arr[0])
 		#
-		# # top5 最优
+		# # top5 best
 		# slice5 = rmsds_arr[:5] if len(rmsds_arr) >= 5 else rmsds_arr
 		# idx5 = np.argmin(slice5)
 		# top5_best_rmsd = float(slice5[idx5])
 		# top5_best_conf = float(confidence_arr[idx5])
 		#
-		# # top10 最优
+		# # top10 best
 		# slice10 = rmsds_arr[:10] if len(rmsds_arr) >= 10 else rmsds_arr
 		# idx10 = np.argmin(slice10)
 		# top10_best_rmsd = float(slice10[idx10])
 		# top10_best_conf = float(confidence_arr[idx10])
 		#
-		# # 全局最优
+		# # Global optimum
 		# idx_best = np.argmin(rmsds_arr)
 		# best_rmsd = float(rmsds_arr[idx_best])
 		# best_conf = float(confidence_arr[idx_best])
@@ -836,7 +723,7 @@ class Base_FM_Model(LightningModule):
 			"top1_centroid_distance": float(centroid_arr[0]),
 			"best_centroid_distance": float(np.min(centroid_arr)),
 
-			# 同时满足 RMSD < 2A 和完整 PoseBusters 合理性
+			# RMSD < 2A and PoseBusters valid
 			"success_top1_2A_posebusters_valid": int((rmsds_arr[0] < 2.0) and bool(valid_rates_arr[0])),
 			"success_top5_2A_posebusters_valid": int(
 				np.any((rmsds_arr[:5] < 2.0) & (valid_rates_arr[:5].astype(bool)))
@@ -845,7 +732,7 @@ class Base_FM_Model(LightningModule):
 				np.any((rmsds_arr < 2.0) & (valid_rates_arr.astype(bool)))
 			),
 
-			# 同时满足 RMSD < 2A 和物理合理性
+			# RMSD < 2A and physical valid
 			"success_top1_2A_physical_valid": int((rmsds_arr[0] < 2.0) and bool(physical_valid_rates_arr[0])),
 			"success_top5_2A_physical_valid": int(
 				np.any((rmsds_arr[:5] < 2.0) & (physical_valid_rates_arr[:5].astype(bool)))
@@ -942,8 +829,7 @@ class Base_FM_Model(LightningModule):
 		df.to_csv(save_path, index=False, encoding="utf-8-sig")
 
 		print(f"Test results saved to: {save_path}")
-		#================一个实验做完可以注释掉================
-		# 挑选你需要的8列，顺序固定
+		#================just record some data================
 		# export_cols= [
 		# 	"top1_rmsd",
 		# # 	"heavy_atoms",
@@ -963,7 +849,7 @@ class Base_FM_Model(LightningModule):
 		# df_export= df[export_cols].copy()
 		# one_experiment_path= os.path.join(save_dir, f"CI_Ours_{test_seed}.csv")
 		# df_export.to_csv(one_experiment_path, index=False)
-		# ================一个实验做完可以注释掉================
+		# ================just record some data================
 
 		top1_2A = df["success_top1_2A"].sum()
 		top5_2A = df["success_top5_2A"].sum()
@@ -1121,24 +1007,24 @@ class Base_FM_Model(LightningModule):
 		print(f"Summary saved to: {summary_path}")
 
 		# =========fill_experiment=========
-		# ---------- 新增：每个复合物的 best_rmsd CSV + PB 汇总表 ----------
+		# --------------------
 		required_cols = ["complex_name", "best_rmsd", "pb_valid_top1", "pb_valid_count_40"]
 		if all(col in df.columns for col in required_cols):
-			# 1. 导出 best_rmsd 明细 CSV（只有名字和 best_rmsd）
+			
 			detail_df = df[["complex_name", "best_rmsd"]].copy()
 			detail_filename = f"fill_experiment_best_rmsd_detail_{environment}_{sample}_seed{test_seed}_basetestnono.csv"
 			detail_save_path = os.path.join(save_dir, detail_filename)
 			detail_df.to_csv(detail_save_path, index=False, encoding="utf-8-sig")
 			print(f"Per-complex best RMSD saved to: {detail_save_path}")
 
-			# 2. 计算两个 PB 汇总比例
-			pb_top1_total = df["pb_valid_top1"].sum()  # 通过的复合物数
-			pb_top1_rate = pb_top1_total / total  # 比例
+			# Calculate summary proportion
+			pb_top1_total = df["pb_valid_top1"].sum()  
+			pb_top1_rate = pb_top1_total / total  
 
-			pb_count_total = df["pb_valid_count_40"].sum()  # 所有复合物 40 个采样中通过的次数总和
-			pb_count_rate = pb_count_total / (total * sample)  # 总通过次数 / 总采样次数
+			pb_count_total = df["pb_valid_count_40"].sum()  
+			pb_count_rate = pb_count_total / (total * sample)  
 
-			# 3. 打印汇总表格
+			# Print summary table
 			pb_summary_rows = [
 				["Metric", "Count", "Rate"],
 				[
@@ -1155,7 +1041,7 @@ class Base_FM_Model(LightningModule):
 			_print_table("===== PoseBusters Validity (Independent of RMSD) =====", pb_summary_rows)
 		else:
 			missing = [c for c in required_cols if c not in df.columns]
-			# assert not missing, f"⚠️ 以下列缺失，无法生成 PB 明细表：{missing}"
+			# assert not missing, f"⚠️ the following columns are missing,unable to generate PB detail table：{missing}"
 		# =================================
 
 
@@ -1246,9 +1132,7 @@ import numpy as np
 import torch
 from scipy.optimize import linear_sum_assignment
 
-# =========================
-# 直接放一起，别依赖外部
-# =========================
+
 allowable_features = {
 	'possible_atomic_num_list': list(range(1, 119)) + ['misc'],
 	'possible_chirality_list': [
@@ -1293,21 +1177,8 @@ allowable_features = {
 
 def compute_symmetry_rmsd_from_complex_graph(data):
 	"""
-	对单个 complex_graph / dataset sample 计算 symmetry-corrected RMSD
-
-	优先级:
-	1. 优先用别人现成的 strict graph-isomorphism 方法: symmrmsd(...)
-	2. strict 失败 -> type-aware Hungarian
-	3. 再失败 -> coords-only Hungarian
-
-	依赖:
-	- 你前面已经有 symmrmsd(...) 这个函数
-	- data['ligand'].pos
-	- data['ligand'].gt_pos
-	- 最好有 data['ligand'].x
-	- 最好有 data['ligand', 'lig_bond', 'ligand'].edge_index
-
-	返回:
+	Calculate symmetry-corrected RMSD for single complex_graph / dataset sample
+	return:
 		rmsd: float
 		mode: str
 	"""
@@ -1315,38 +1186,36 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 	lig = data['ligand']
 
 	if not hasattr(lig, 'pos') or not hasattr(lig, 'gt_pos'):
-		raise ValueError("data['ligand'] 必须同时包含 pos 和 gt_pos")
+		raise ValueError("data['ligand'] must contain both pos and gt_pos")
 
 	pred = lig.pos.detach().cpu().numpy()
 	gt = lig.gt_pos.detach().cpu().numpy()
 
 	if pred.shape != gt.shape:
-		raise ValueError(f"pred/gt shape 不一致: pred={pred.shape}, gt={gt.shape}")
+		raise ValueError(f"Shape mismatch between pred and gt: pred={pred.shape}, gt={gt.shape}")
 	if pred.ndim != 2 or pred.shape[1] != 3:
-		raise ValueError(f"坐标 shape 应为 [N,3]，现在是 {pred.shape}")
+		raise ValueError(f"Coordinate shape should be [N,3]，got {pred.shape}")
 
 	# =========================================================
-	# 1) 优先用别人现成 strict graph-isomorphism 版: symmrmsd
 	# =========================================================
 	try:
 		if not hasattr(lig, 'x'):
-			raise ValueError("ligand.x 不存在，无法解码 atomic numbers")
+			raise ValueError("ligand.x does not exist，cannot encode atomic numbers")
 
 		x = lig.x.detach().cpu().numpy()
 		if x.ndim != 2 or x.shape[1] < 1:
-			raise ValueError(f"ligand.x shape 非法: {x.shape}")
+			raise ValueError(f"ligand.x shape is invalid: {x.shape}")
 
-		# 你的预处理里 ligand.x[:,0] 是 atomic number 在 vocab 中的索引
 		atomic_num_indices = x[:, 0].astype(np.int64)
 		atomic_num_vocab = allowable_features['possible_atomic_num_list']
 
 		atomicnums = []
 		for idx in atomic_num_indices:
 			if idx < 0 or idx >= len(atomic_num_vocab):
-				raise ValueError(f"atomic number index 越界: {idx}")
+				raise ValueError(f"atomic number index out of bounds: {idx}")
 			val = atomic_num_vocab[idx]
 			if val == 'misc':
-				raise ValueError("发现 misc atomic number，strict symmrmsd 无法安全使用")
+				raise ValueError("misc atomic number and strict symmrmsd unsafe to use")
 			atomicnums.append(int(val))
 		atomicnums = np.asarray(atomicnums, dtype=np.int64)
 
@@ -1357,11 +1226,11 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 		elif hasattr(lig, 'edge_index'):
 			edge_index = lig.edge_index
 		else:
-			raise ValueError("找不到 ligand 的 edge_index")
+			raise ValueError("edge_index of ligand not found")
 
 		edge_index = edge_index.detach().cpu().numpy()
 		if edge_index.shape[0] != 2:
-			raise ValueError(f"edge_index shape 非法: {edge_index.shape}")
+			raise ValueError(f"edge_index shape is invalid: {edge_index.shape}")
 
 		num_nodes = gt.shape[0]
 		adjacency = np.zeros((num_nodes, num_nodes), dtype=np.int64)
@@ -1369,7 +1238,6 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 		adjacency[src, dst] = 1
 		adjacency[dst, src] = 1
 
-		# 用别人现成的方法
 		rmsd = symmrmsd(
 			coordsref=gt,
 			coords=pred,
@@ -1377,8 +1245,8 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 			aprops=atomicnums,
 			amref=adjacency,
 			am=adjacency,
-			center=False,      # docking pose 常见设定：不做额外对齐
-			minimize=False,    # 不做旋转最小化
+			center=False,      
+			minimize=False,    # Skip rotational minimization
 			cache=True,
 		)
 		return float(rmsd), "strict_graph"
@@ -1387,11 +1255,11 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 		strict_error = e
 
 	# ==========================================
-	# 2) strict 失败 -> type-aware Hungarian
+	# strict failed -> type-aware Hungarian
 	# ==========================================
 	try:
 		if not hasattr(lig, 'x'):
-			raise ValueError("ligand.x 不存在，无法做 type-aware Hungarian")
+			raise ValueError("ligand.x does not exist，type-aware Hungarian cannot be performed")
 
 		atom_types = lig.x[:, 0].detach().cpu().numpy().astype(np.int64)
 
@@ -1411,7 +1279,7 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 		pass
 
 	# ==========================================
-	# 3) 最后 -> coords-only Hungarian
+	# Final -> coords-only Hungarian
 	# ==========================================
 	dist = np.linalg.norm(pred[:, None, :] - gt[None, :, :], axis=-1)
 	row_ind, col_ind = linear_sum_assignment(dist)
@@ -1421,7 +1289,7 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 
 	rmsd = np.sqrt(np.mean(np.sum((pred - gt_match) ** 2, axis=-1)))
 	return float(rmsd), f"hungarian_coords (strict failed: {strict_error})"
-#===========以下将是采样打分部分，后续会进行迁移尽量不全部填进一个文件里============
+#===========Sampling scoring section============
 def t_to_sigma_conf(t_tr, t_rot, t_tor, tr_sigma_min=0.1, tr_sigma_max=19, rot_sigma_min=0.03, rot_sigma_max=1.55, tor_sigma_min=0.0314, tor_sigma_max=3.14):
 	tr_sigma = tr_sigma_min ** (1-t_tr) * tr_sigma_max ** t_tr
 	rot_sigma = rot_sigma_min ** (1-t_rot) * rot_sigma_max ** t_rot
