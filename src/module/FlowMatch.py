@@ -21,7 +21,7 @@ from matcha.utils.spyrmsd import symmrmsd
 from matcha.utils.transforms import rotvec_to_rotmat
 from project_mine.compute_energy_curve import save_simple_complex_all
 from project_mine.merge_pose_sdfs import merge_pose_sdfs, write_complex_manifest
-from project_mine.model import LearnableTimeBudget
+from project_mine.model import LearnableTimeBudget         ##src.models.model
 from project_mine.pb_valid import PB_valid
 
 from project_mine.src.utils.pylogger import RankedLogger
