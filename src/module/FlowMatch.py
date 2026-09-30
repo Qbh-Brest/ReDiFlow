@@ -85,7 +85,7 @@ def modify_conformer_torsion_angles_torch(pos, edge_index, mask_rotate, torsion_
 	for i in rot_bond_range:
 		u, v = edge_index[i, 0], edge_index[i, 1]
 
-		# Forward rotation by convention：rot_vec = pos[u] - pos[v]
+		# Forward rotation by convention:rot_vec = pos[u] - pos[v]
 		rot_vec = new_pos[u] - new_pos[v]
 
 		# Normalize and multiply by angular velocity
@@ -1041,7 +1041,7 @@ class Base_FM_Model(LightningModule):
 			_print_table("===== PoseBusters Validity (Independent of RMSD) =====", pb_summary_rows)
 		else:
 			missing = [c for c in required_cols if c not in df.columns]
-			# assert not missing, f"⚠️ the following columns are missing,unable to generate PB detail table：{missing}"
+			# assert not missing, f"⚠️ the following columns are missing,unable to generate PB detail table:{missing}"
 		# =================================
 
 
@@ -1194,13 +1194,13 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 	if pred.shape != gt.shape:
 		raise ValueError(f"Shape mismatch between pred and gt: pred={pred.shape}, gt={gt.shape}")
 	if pred.ndim != 2 or pred.shape[1] != 3:
-		raise ValueError(f"Coordinate shape should be [N,3]，got {pred.shape}")
+		raise ValueError(f"Coordinate shape should be [N,3],got {pred.shape}")
 
 	# =========================================================
 	# =========================================================
 	try:
 		if not hasattr(lig, 'x'):
-			raise ValueError("ligand.x does not exist，cannot encode atomic numbers")
+			raise ValueError("ligand.x does not exist,cannot encode atomic numbers")
 
 		x = lig.x.detach().cpu().numpy()
 		if x.ndim != 2 or x.shape[1] < 1:
@@ -1259,7 +1259,7 @@ def compute_symmetry_rmsd_from_complex_graph(data):
 	# ==========================================
 	try:
 		if not hasattr(lig, 'x'):
-			raise ValueError("ligand.x does not exist，type-aware Hungarian cannot be performed")
+			raise ValueError("ligand.x does not exist,type-aware Hungarian cannot be performed")
 
 		atom_types = lig.x[:, 0].detach().cpu().numpy().astype(np.int64)
 
