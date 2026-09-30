@@ -148,7 +148,7 @@ def randomize_rigid_pose(pos, tr_sigma=3.0, max_rot_angle=None):
 
 def sample_random_torsion_updates(data, tor_sigma=1.0, tor_max_angle=math.pi):
     """
-    return random torsional angles of shape [M]，M = edge_mask.sum()
+    return random torsional angles of shape [M],M = edge_mask.sum()
     Unit:radians
     """
     edge_mask = data['ligand'].edge_mask.bool()
@@ -605,7 +605,7 @@ class PDBBindDataModule(pl.LightningDataModule):
 
         blacklist = ['1v97_1_MTE_1','2o5m_1_MNR_0','3uni_1_SAL_0','4tvd_1_BGC_4','4tvd_1_GLC_0','6nco_1_KQP_0','6wjy_2_U41_0'] #['6o0h']#["7D6O_MTE"]#['1v97_1_MTE_1','2o5m_1_MNR_0','3uni_1_SAL_0','4tvd_1_BGC_4','4tvd_1_GLC_0','6nco_1_KQP_0','6wjy_2_U41_0']   #["7D6O_MTE"]
         
-        # print("Blacklist loaded,total count：", len(blacklist))
+        # print("Blacklist loaded,total count："len(blacklist))
         valid_complexes = []
         all_files = [f for f in os.listdir(self.data_dir) if f.endswith(".pt")]
 
