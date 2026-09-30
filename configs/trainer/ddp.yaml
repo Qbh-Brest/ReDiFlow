@@ -6,10 +6,8 @@ strategy: auto
 
 accelerator: gpu
 
-# 重点在这里：改成 1
 devices: [0]
 
 num_nodes: 1
 
-# 单卡不需要同步 BatchNorm，改成 False
 sync_batchnorm: False
