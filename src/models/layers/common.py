@@ -10,7 +10,7 @@ import numpy as np
 from e3nn.nn import BatchNorm, Activation
 
 
-def clamped_norm(vec, dim=1, min=1e-6):                 #原先是1e-6
+def clamped_norm(vec, dim=1, min=1e-6):                 #1e-6
 	return torch.clamp(torch.linalg.vector_norm(vec, dim=dim), min=min)
 
 class Output_scale(nn.Module):
