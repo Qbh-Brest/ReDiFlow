@@ -1,7 +1,6 @@
 defaults:
   - default
 
-# 单卡训练不要用 ddp，改成 auto 让它自己决定
 strategy: auto
 
 accelerator: gpu
