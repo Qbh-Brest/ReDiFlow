@@ -3,10 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 class LearnableTimeBudget(nn.Module):
     """
-    学习长度为 num_frames-1 的非均匀时间步长:
         dt_k >= 0, sum_k dt_k = 1
-
-    对应 ODE rollout 的每一步，而不是每一个离散帧点。
     """
 
     def __init__(self, num_steps, init_mode='middle_fast'):
@@ -23,7 +20,7 @@ class LearnableTimeBudget(nn.Module):
 
     def _build_middle_fast_prior(self, num_steps):
         x = torch.linspace(0, 1, num_steps)
-        # 中间高，两头低
+        # High in middle,low at both ends
         values = 0.6 + 1.4 * torch.exp(-0.5 * ((x - 0.5) / 0.18) ** 2)
         values = values / values.sum()
         return values.float()
@@ -45,9 +42,7 @@ class LearnableTimeBudget(nn.Module):
 
 def to_step_ids(frame_indices, num_steps):
     """
-    把 data.t_float / frame idx 映射到 rollout step id
-    你现在 validation 是 total_steps = self.num_frames - 1
-    所以这里统一映射到 [0, num_steps-1]
+    Map data.t_float / frame idx to rollout step id
     """
     if frame_indices.dtype in [torch.int32, torch.int64]:
         step_ids = frame_indices.long()
