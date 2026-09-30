@@ -65,7 +65,7 @@ def simple_test():
 
     print("Start sampling test···")
     trainer.test(model=model, datamodule=datamodule)
-    print("Test completed！")
+    print("Test completed...")
 
 
 if __name__ == "__main__":
