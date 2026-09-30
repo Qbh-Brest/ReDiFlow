@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import torch
-# 允许显卡使用 TensorCore 加速，精度损失微乎其微，速度提升巨大
+# Enable Tensor Core acceleration for GPU
 torch.set_float32_matmul_precision('high')
 torch.autograd.set_detect_anomaly(True)
 import hydra
