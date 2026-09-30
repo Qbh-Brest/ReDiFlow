@@ -243,11 +243,7 @@ class TensorProductModel(torch.nn.Module):
 		data.graph_sigma_emb = self.timestep_emb_func(data.complex_t['tr'])
 
 		# fix the magnitude of translational and rotational score vectors
-		# ---- 修复平移 (Translation) 预测 ----
-		# 1. 放弃使用不安全的 clamped_norm，手写一个底层安全的 Norm
-		# 注意：1e-8 必须加在 sqrt 里面！这保证了底数永远大于 0，导数永远不会爆。
-
-
+		
 		#tr_norm = clamped_norm(tr_pred, dim=1).unsqueeze(1)
 		#tr_pred = tr_pred / tr_norm * self.tr_final_layer(torch.cat([tr_norm, data.graph_sigma_emb], dim=1))
 		with torch.autocast(device_type="cuda", enabled=False):
@@ -264,7 +260,6 @@ class TensorProductModel(torch.nn.Module):
 			tr_pred = tr_pred / tr_sigma.unsqueeze(1)
 			rot_pred = rot_pred * rot_sigma.unsqueeze(1)
 		'''
-		这里伟大的我需要修改（因为源代码强制返回了一个数）
 				if self.no_torsion or data['ligand'].edge_mask.sum() == 0:
 			return tr_pred, rot_pred, torch.zeros(1, device=tr_pred.device)
 		'''
