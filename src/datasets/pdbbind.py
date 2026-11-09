@@ -575,7 +575,6 @@ class PDBBindDataModule(pl.LightningDataModule):
         self.num_workers = args.num_workers
         self.args = args
         self.train_idx_list = []
-        self.val_idx_list = []
         self.test_idx_list = []
         self.esm_data = None  # None
 
