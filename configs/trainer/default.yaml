@@ -12,9 +12,6 @@ devices: 1
 precision: bf16-mixed
 #precision: 32
 
-# perform a validation loop every N training epochs
-check_val_every_n_epoch: 5
-
 # set True to to ensure deterministic results
 # makes training slower but gives more reproducibility than just setting seeds
 deterministic: False
@@ -22,5 +19,4 @@ deterministic: False
 gradient_clip_algorithm: norm
 #gradient_clip_val: 0.5
 
-num_sanity_val_steps: 0
 log_every_n_steps: 44
