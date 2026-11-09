@@ -32,7 +32,6 @@ args:
 
   split_test: ${paths.data_dir}/splits/timesplit_test
   split_train: ${paths.data_dir}/splits/timesplit_no_lig_overlap_train
-  split_val: ${paths.data_dir}/splits/timesplit_no_lig_overlap_val
 
   tor_sigma_max: 3.14
   tor_sigma_min: 0.03
