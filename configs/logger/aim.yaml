@@ -15,7 +15,6 @@ aim:
   experiment: null # any string, set to "default" if not specified
 
   train_metric_prefix: "train/"
-  val_metric_prefix: "val/"
   test_metric_prefix: "test/"
 
   # sets the tracking interval in seconds for system usage metrics (CPU, GPU, memory, etc.)
