@@ -363,23 +363,6 @@ class PDBBindDataset(Dataset):
                     n_sample=getattr(self, "n_sample", 40),
                     seed=getattr(self, "test_seed", 8888),
                 )
-            else:
-                seed = self.fixed_seed_base + idx
-
-                torch.manual_seed(seed)
-                np.random.seed(seed)
-                random.seed(seed)
-
-                data['ligand'].initial_pos, data['ligand'].rand_tor_updates = randomize_initial_pose_with_torsion(
-                    data,
-                    tr_sigma=getattr(self, 'tr_sigma', 3.0),
-                    max_rot_angle=getattr(self, 'max_rot_angle', None),
-                    tor_sigma=getattr(self, 'tor_sigma', 1.0),
-                    tor_max_angle=getattr(self, 'tor_max_angle', math.pi / 3),
-                    torsion_prob=getattr(self, 'torsion_prob', 1.0),
-                    is_reverse_order=getattr(self, 'is_reverse_torsion_order', False),
-                )
-
         except:
             raise ValueError(f"ANYTHING PROBLEM WE GET IT\nSO YOU'D BETTER CHECK IT")
 
@@ -624,8 +607,7 @@ class PDBBindDataModule(pl.LightningDataModule):
 
         split_idx = int(len(valid_complexes) * 0.9)
         self.train_idx_list = valid_complexes[:split_idx]
-        self.val_idx_list = valid_complexes[split_idx:]
-        #self.test_idx_list = self.val_idx_list
+        #self.test_idx_list = valid_complexes[split_idx:]
         self.test_idx_list = valid_complexes   ##astex_set DOCKGEN_set PDBBind_set unseen_receptors
         # with open(f"D:/PythonProject medicine/project_mine/data/split/posebusters_test.txt", "w",encoding="utf-8") as f:
         #     f.write("\n".join(self.test_idx_list))
@@ -646,27 +628,6 @@ class PDBBindDataModule(pl.LightningDataModule):
             ),
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            collate_fn=Batch.from_data_list,
-            persistent_workers=(self.num_workers > 0)
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            PDBBindDataset(
-                self.data_dir,
-                self.origin_data_dir,
-                self.teacher_dir,
-                self.val_idx_list,
-                self.esm_data,
-                is_train=False,
-                inference=False,
-                fixed_val_t=0.5,
-                fixed_seed_base=42,
-            ),
-            batch_size=self.batch_size,
-            shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
             collate_fn=Batch.from_data_list,
