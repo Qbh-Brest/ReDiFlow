@@ -490,9 +490,7 @@ class Base_FM_Model(LightningModule):
 
 		return total_loss.detach()
 
-	def test_step(self, data, batch_idx):
-		if data.complex_name[0] != "6a72_1_9UX_0":
-			return None                                 
+	def test_step(self, data, batch_idx):                                
 		batch_size = data.num_graphs
 		device = data['ligand'].pos.device
 		l_batch = data['ligand'].batch
@@ -510,25 +508,13 @@ class Base_FM_Model(LightningModule):
 		physical_valid_rates = []
 		total_steps = self.num_frames - 1
 		complex_energy_list =[]
-		tr_dt_all = self.tr_time_budget.get_dt().detach().to(device)
-		#print(f"tor_dt_all:{tr_dt_all}")
-		#rot_dt_all = self.rot_time_budget.get_dt().detach().to(device)
-		#tor_dt_all = self.tor_time_budget.get_dt().detach().to(device)
-
-		tor_dt_all = tr_dt_all
-		#tor_dt_all = tor_dt_all.repeat_interleave(2)/2
-		#tor_dt_all = tor_dt_all.reshape(5, 2).sum(dim=1)
-		rot_dt_all = tr_dt_all
-		#rot_dt_all = rot_dt_all / rot_dt_all.sum()
+		tor_dt_all = self.tr_time_budget.get_dt().detach().to(device)
 		tor_dt_all = tor_dt_all / tor_dt_all.sum()
 		tr_dt_all = torch.tensor(
 			[0.14, 0.13, 0.12, 0.11, 0.10,
 			 0.10, 0.09, 0.08, 0.07, 0.06],
 			device="cuda:0"
 		)
-		#tr_dt_all = tr_dt_all.repeat_interleave(2) / 2
-
-		#tr_dt_all = tr_dt_all.reshape(5, 2).sum(dim=1)
 		tr_dt_all = tr_dt_all / tr_dt_all.sum()
 
 
@@ -537,17 +523,8 @@ class Base_FM_Model(LightningModule):
 			 0.10, 0.09, 0.08, 0.07, 0.05],
 			device="cuda:0"
 		)
-		#rot_dt_all = rot_dt_all.repeat_interleave(2) / 2
-
-		#rot_dt_all = rot_dt_all.reshape(5, 2).sum(dim=1)
 		rot_dt_all = rot_dt_all / rot_dt_all.sum()
 
-		# tor_dt_all = torch.tensor(
-		# 	[0.03, 0.04, 0.05, 0.07, 0.09,
-		# 	 0.12, 0.15, 0.16, 0.16, 0.18],
-		# 	device="cuda:0"
-		# )
-		# tor_dt_all = tor_dt_all / tor_dt_all.sum()
 
 		#=====================================
 		records = []
@@ -558,8 +535,7 @@ class Base_FM_Model(LightningModule):
 			for n in range(init_pos.shape[0]):
 				current_pos = init_pos[n] - data.complex_center
 				t_test = 1.0
-				# if n!=29:
-				# 	continue
+				
 				for i in range(total_steps):
 
 					data['ligand'].pos = current_pos
