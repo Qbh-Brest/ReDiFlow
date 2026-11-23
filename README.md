@@ -159,7 +159,7 @@ The resulting processed data are written to:
 data/PDBBind_processed/
 ```
 
-During molecular graph construction, the current implementation removes hydrogen atoms, uses atomic number and chirality as node features, and constructs distance-based ligand and ligand-receptor edges. The reference setup uses a 5.0 A atom-level interaction cutoff, at most 8 nearest neighbors per atom, a 15.0 A receptor-pocket radius, and up to 24 nearest receptor C-alpha neighbors.
+During molecular graph construction, the current implementation removes hydrogen atoms, uses atomic number and chirality as node features, and constructs distance-based ligand and ligand-receptor edges. The reference setup uses a 5.0 A atom-level interaction cutoff, at most 8 nearest neighbors per atom, a 15.0 A distance cutoff for receptor-residue edges, and up to 24 nearest receptor C-alpha neighbors.
 
 ## Inference
 
