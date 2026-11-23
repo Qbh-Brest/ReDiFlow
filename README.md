@@ -21,7 +21,7 @@ Standard generative docking evolves translation, rotation, and torsion using one
 
 At every sampling step, the pre-trained backbone is queried using the same current protein-ligand state. Each degree of freedom uses its own effective time, and the component-wise updates are then applied jointly. The dynamics are therefore temporally decoupled but state-coupled.
 
-## Content
+## Contents
 - [Installation](#installation)
 - [Data preparation](#data-preparation)
   - [Existing datasets](#existing-datasets)
