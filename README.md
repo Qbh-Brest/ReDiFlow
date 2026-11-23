@@ -96,9 +96,7 @@ The same workflow can be applied to PoseBusters, ASTEX Diverse, DockGen, or anot
 Extract the receptor sequences from the raw protein structures and write them to one FASTA file:
 
 ```bash
-python extract_fasta.py \
-  --data_dir "data/PDBBind" \
-  --out_file "data/PDBBind_sequences.fasta"
+python extract_fasta.py --data_dir data/PDBBind --out_file data/PDBBind_sequences.fasta
 ```
 
 Output:
@@ -112,12 +110,7 @@ data/PDBBind_sequences.fasta
 Use the ESM-2 `esm2_t33_650M_UR50D` model and extract representations from layer 33:
 
 ```bash
-python esm/scripts/extract.py \
-  esm2_t33_650M_UR50D \
-  "data/PDBBind_sequences.fasta" \
-  "data/PDBBind_esm2_embeddings_raw" \
-  --repr_layers 33 \
-  --include mean per_tok
+python esm/scripts/extract.py esm2_t33_650M_UR50D data/PDBBind_sequences.fasta data/PDBBind_esm2_embeddings_raw --repr_layers 33 --include mean per_tok
 ```
 
 This creates one raw embedding file for each protein sequence under:
@@ -131,9 +124,7 @@ data/PDBBind_esm2_embeddings_raw/
 Merge the individual ESM-2 outputs into a single PyTorch file:
 
 ```bash
-python merge_embedding.py \
-  --esm_embeddings_path "data/PDBBind_esm2_embeddings_raw" \
-  --output_path "data/PDBBind_esm2_embeddings.pt"
+python merge_embedding.py --esm_embeddings_path data/PDBBind_esm2_embeddings_raw --output_path data/PDBBind_esm2_embeddings.pt
 ```
 
 Output:
@@ -147,10 +138,7 @@ data/PDBBind_esm2_embeddings.pt
 Combine the raw structures and merged protein embeddings into the processed dataset used by the model:
 
 ```bash
-python process_mols.py \
-  --origin_path "data/PDBBind" \
-  --pt_path "data/PDBBind_esm2_embeddings.pt" \
-  --out_file "data/PDBBind_processed"
+python process_mols.py --origin_path data/PDBBind --pt_path data/PDBBind_esm2_embeddings.pt --out_file data/PDBBind_processed
 ```
 
 The resulting processed data are written to:
@@ -168,10 +156,7 @@ Initial ligand poses are generated through random rigid-body and torsional pertu
 Run inference on the processed dataset with a trained checkpoint:
 
 ```bash
-python inference_base.py \
-  --ckpt_path "runs/<RUN_ID>/checkpoints/<CHECKPOINT>.ckpt" \
-  --data_dir "data/PDBBind_processed" \
-  --origin_data_dir "data/PDBBind"
+python inference_base.py --ckpt_path runs/<RUN_ID>/checkpoints/<CHECKPOINT>.ckpt --data_dir data/PDBBind_processed --origin_data_dir data/PDBBind
 ```
 
 Replace `<RUN_ID>` and `<CHECKPOINT>` with the actual training run and checkpoint filename. The manuscript configuration uses 10 sampling steps, 40 candidates per complex, and random seed 42; confirm that the corresponding values are set in the inference configuration before reproducing the reported results.
