@@ -163,7 +163,7 @@ During molecular graph construction, the current implementation removes hydrogen
 
 ## Inference
 
-Initial ligand poses are generated through random rigid-body and torsional perturbations without native pocket information. The reference protocol generates 40 candidates per complex, applies 10 outer sampling steps, and ranks the resulting poses using a confidence model.
+Initial ligand poses are generated through random rigid-body and torsional perturbations of the crystallographic reference ligand, using its coordinates as the starting point. The reference protocol generates 40 candidates per complex, applies 10 outer sampling steps, and ranks the resulting poses using a confidence model.
 
 Run inference on the processed dataset with a trained checkpoint:
 
