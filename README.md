@@ -1,4 +1,4 @@
-# ReDiFlow:Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking
+# ReDiFlow: Redistribution-Decoupled Riemannian Flow Matching for Molecular Docking
 
 
 ## Overview
