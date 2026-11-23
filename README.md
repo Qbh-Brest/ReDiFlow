@@ -69,7 +69,7 @@ The experiments use the following datasets:
 - **DockGen** for evaluation on unseen binding sites.
 - **PDBBind time-split** for evaluation under temporal distribution shift.
 
-There are 426 usable PoseBusters protein-ligand complexes after preprocessing, with 383 used for backbone training and 43 held out for in-domain testing.
+There are 427 usable PoseBusters protein-ligand complexes after preprocessing, with 384 used for backbone training and 43 held out for in-domain testing.
 ### Existing datasets 
 
 Astex and PoseBusters datasets can be downloaded [here](https://zenodo.org/records/8278563). PDBBind_processed can be found [here](https://zenodo.org/records/6408497). DockGen can be downloaded from [here](https://zenodo.org/records/10656052).
